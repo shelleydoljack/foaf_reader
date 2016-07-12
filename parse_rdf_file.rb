@@ -7,15 +7,19 @@ require 'openssl'
 require 'linkeddata'
 
 # 5. method to get the abstract from a person's interest
-def abstract_for(interest)
+def info_for(interest)
   abs_query = "PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     PREFIX dbo: <http://dbpedia.org/ontology/>
-    SELECT ?abs
-      WHERE { ?s dbo:abstract ?abs
-        FILTER (lang(?abs) = 'en')}"
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    SELECT ?label ?abs
+      WHERE { ?s dbo:abstract ?abs;
+              rdfs:label ?label
+        FILTER (lang(?abs) = 'en')
+        FILTER (lang(?label) = 'en')}"
   abs_graph = RDF::Graph.load(interest)
   sparql_abstracts_query = SPARQL.parse(abs_query)
   sparql_abstracts_query.execute(abs_graph) do |result|
+    puts result.label
     puts result.abs
   end
 end
@@ -48,13 +52,15 @@ end
 # 4. What are the interests of people I know
 interests_query = "
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-SELECT DISTINCT ?interest
-  WHERE { ?s foaf:interest ?interest}
+SELECT DISTINCT ?interest ?name
+  WHERE { ?s foaf:interest ?interest;
+            foaf:name ?name}
 "
 
 puts "People's interests"
 q_parsed = SPARQL.parse(interests_query)
 q_parsed.execute(graph) do |result|
-  puts result.interest
-  abstract_for(result.interest)
+  puts result.name
+  # puts result.interest
+  info_for(result.interest)
 end
